@@ -1,3 +1,4 @@
+#include "DigitalIn.h"
 #include "DigitalOut.h"
 #include "InterfaceDigitalIn.h"
 #include "Thread.h"
@@ -9,10 +10,10 @@
 #include <cstring>
 
 
-
+DigitalIn button(PA_8);
 
 I2C display_I2C(PB_9,PB_8);
-Adafruit_SSD1306_I2c display(display_I2C,A1);
+Adafruit_SSD1306_I2c display(display_I2C,PA_1);
 
 
 static BufferedSerial wifi_port(PB_6, PB_7);
@@ -24,10 +25,10 @@ Ticker update_display_ticker;
 Thread sensor_update_thread;
 Thread read_UART_thread;
 Thread check_poliv_signal_thread;
-
+Thread check_button_signal_thread;
 
 DigitalOut led(PC_13);
-AnalogIn water_sensor(A0);
+AnalogIn water_sensor(PA_0);
 DigitalIn poliv_signal(PB_0);
 DigitalOut relay(PB_12);
 
@@ -54,6 +55,16 @@ void poliv(){
     thread_sleep_for(delay_for_poliv);
     relay=0;
     return;
+}
+
+// Если пользователь нажмет на кнопку, то будет выполнен полив
+void button_click(){
+    while (true) {
+        if (button != true) {
+            poliv();
+            thread_sleep_for(1000);
+        }
+    }
 }
 
 void check_poliv_signal(){
@@ -136,6 +147,8 @@ int main()
     wifi_port.set_blocking(false);
     thread_sleep_for(5000);
 
+    
+    check_button_signal_thread.start(&button_click);
     sensor_update_thread.start(&transmit_sensor_data);
 
     //update_display_ticker.attach(&update_display_data,1s);
